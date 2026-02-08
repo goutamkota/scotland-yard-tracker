@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,56 +6,67 @@
 
 @layer base {
   :root {
-    --background: 220 20% 8%;
-    --foreground: 45 20% 85%;
+    --background: 225 30% 6%;
+    --foreground: 210 20% 88%;
 
-    --card: 220 18% 12%;
-    --card-foreground: 45 20% 85%;
+    --card: 225 25% 10%;
+    --card-foreground: 210 20% 88%;
 
-    --popover: 220 18% 14%;
-    --popover-foreground: 45 20% 85%;
+    --popover: 225 25% 12%;
+    --popover-foreground: 210 20% 88%;
 
-    --primary: 45 80% 55%;
-    --primary-foreground: 220 20% 8%;
+    --primary: 200 70% 50%;
+    --primary-foreground: 225 30% 6%;
 
-    --secondary: 220 15% 18%;
-    --secondary-foreground: 45 20% 85%;
+    --secondary: 225 20% 15%;
+    --secondary-foreground: 210 20% 88%;
 
-    --muted: 220 15% 16%;
-    --muted-foreground: 220 10% 50%;
+    --muted: 225 20% 13%;
+    --muted-foreground: 220 15% 48%;
 
     --accent: 0 70% 50%;
-    --accent-foreground: 45 20% 95%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 15% 20%;
-    --input: 220 15% 22%;
-    --ring: 45 80% 55%;
+    --border: 225 20% 18%;
+    --input: 225 20% 20%;
+    --ring: 200 70% 50%;
 
     --radius: 0.5rem;
 
     --mr-x: 0 70% 50%;
     --mr-x-foreground: 0 0% 100%;
-    --detective: 210 60% 50%;
+    --detective: 210 60% 55%;
     --detective-foreground: 0 0% 100%;
-    --reveal: 45 80% 55%;
-    --locked: 220 15% 14%;
-    --current-round: 45 80% 55%;
+    --reveal: 200 70% 50%;
+    --locked: 225 20% 12%;
+    --current-round: 200 70% 50%;
 
-    --font-display: 'Playfair Display', serif;
+    --taxi: 45 90% 50%;
+    --taxi-foreground: 45 100% 10%;
+    --bus: 145 60% 42%;
+    --bus-foreground: 0 0% 100%;
+    --underground: 340 70% 52%;
+    --underground-foreground: 0 0% 100%;
+    --black-ticket: 0 0% 15%;
+    --black-ticket-foreground: 0 0% 80%;
+    --double-move: 270 60% 55%;
+    --double-move-foreground: 0 0% 100%;
+
+    --font-display: 'Space Grotesk', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
     --font-body: 'Inter', sans-serif;
 
-    --sidebar-background: 220 18% 10%;
-    --sidebar-foreground: 45 20% 85%;
-    --sidebar-primary: 45 80% 55%;
-    --sidebar-primary-foreground: 220 20% 8%;
-    --sidebar-accent: 220 15% 18%;
-    --sidebar-accent-foreground: 45 20% 85%;
-    --sidebar-border: 220 15% 20%;
-    --sidebar-ring: 45 80% 55%;
+    --sidebar-background: 225 25% 8%;
+    --sidebar-foreground: 210 20% 88%;
+    --sidebar-primary: 200 70% 50%;
+    --sidebar-primary-foreground: 225 30% 6%;
+    --sidebar-accent: 225 20% 15%;
+    --sidebar-accent-foreground: 210 20% 88%;
+    --sidebar-border: 225 20% 18%;
+    --sidebar-ring: 200 70% 50%;
   }
 }
 
@@ -75,8 +86,8 @@
 }
 
 @layer components {
-  .noir-glow {
-    box-shadow: 0 0 20px hsl(45 80% 55% / 0.08), 0 0 60px hsl(45 80% 55% / 0.04);
+  .card-glow {
+    box-shadow: 0 0 20px hsl(200 70% 50% / 0.06), 0 0 60px hsl(200 70% 50% / 0.03);
   }
 
   .mr-x-badge {
@@ -89,6 +100,31 @@
     color: hsl(var(--detective-foreground));
   }
 
+  .transport-taxi {
+    background: hsl(var(--taxi));
+    color: hsl(var(--taxi-foreground));
+  }
+
+  .transport-bus {
+    background: hsl(var(--bus));
+    color: hsl(var(--bus-foreground));
+  }
+
+  .transport-underground {
+    background: hsl(var(--underground));
+    color: hsl(var(--underground-foreground));
+  }
+
+  .transport-black {
+    background: hsl(var(--black-ticket));
+    color: hsl(var(--black-ticket-foreground));
+  }
+
+  .transport-double {
+    background: hsl(var(--double-move));
+    color: hsl(var(--double-move-foreground));
+  }
+
   .round-card {
     @apply rounded-lg border transition-all duration-300;
     background: hsl(var(--card));
@@ -96,7 +132,7 @@
 
   .round-card.current {
     border-color: hsl(var(--current-round));
-    box-shadow: 0 0 16px hsl(45 80% 55% / 0.15);
+    box-shadow: 0 0 16px hsl(200 70% 50% / 0.15);
   }
 
   .round-card.locked {
@@ -120,7 +156,7 @@
   .game-title {
     font-family: var(--font-display);
     @apply text-primary;
-    text-shadow: 0 0 30px hsl(45 80% 55% / 0.3);
+    text-shadow: 0 0 30px hsl(200 70% 50% / 0.3);
   }
 
   .fade-in {
@@ -142,11 +178,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulse-gold {
-  0%, 100% { box-shadow: 0 0 8px hsl(45 80% 55% / 0.2); }
-  50% { box-shadow: 0 0 20px hsl(45 80% 55% / 0.4); }
+@keyframes pulse-blue {
+  0%, 100% { box-shadow: 0 0 8px hsl(200 70% 50% / 0.2); }
+  50% { box-shadow: 0 0 20px hsl(200 70% 50% / 0.4); }
 }
 
-.pulse-gold {
-  animation: pulse-gold 2s ease-in-out infinite;
+.pulse-active {
+  animation: pulse-blue 2s ease-in-out infinite;
 }

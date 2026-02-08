@@ -9,12 +9,12 @@ interface GameOverModalProps {
 
 export function GameOverModal({ type, caughtBy, caughtInRound, onNewGame }: GameOverModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm fade-in">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 noir-glow slide-up text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm fade-in p-4">
+      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 sm:p-8 card-glow slide-up text-center">
         {type === "detectives_win" ? (
           <>
-            <div className="text-6xl mb-4">🔍</div>
-            <h2 className="font-display text-3xl font-bold text-detective mb-2">
+            <div className="text-5xl sm:text-6xl mb-4">🔍</div>
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-detective mb-2">
               Mr. X Caught!
             </h2>
             <p className="text-muted-foreground font-mono text-sm mb-1">
@@ -26,8 +26,8 @@ export function GameOverModal({ type, caughtBy, caughtInRound, onNewGame }: Game
           </>
         ) : (
           <>
-            <div className="text-6xl mb-4">🎩</div>
-            <h2 className="font-display text-3xl font-bold text-accent mb-2">
+            <div className="text-5xl sm:text-6xl mb-4">🎩</div>
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-accent mb-2">
               Mr. X Escapes!
             </h2>
             <p className="text-muted-foreground font-mono text-sm mb-8">

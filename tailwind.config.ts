@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["Playfair Display", "serif"],
+        display: ["Space Grotesk", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
         body: ["Inter", "sans-serif"],
       },
@@ -59,6 +59,26 @@ export default {
         detective: {
           DEFAULT: "hsl(var(--detective))",
           foreground: "hsl(var(--detective-foreground))",
+        },
+        taxi: {
+          DEFAULT: "hsl(var(--taxi))",
+          foreground: "hsl(var(--taxi-foreground))",
+        },
+        bus: {
+          DEFAULT: "hsl(var(--bus))",
+          foreground: "hsl(var(--bus-foreground))",
+        },
+        underground: {
+          DEFAULT: "hsl(var(--underground))",
+          foreground: "hsl(var(--underground-foreground))",
+        },
+        "black-ticket": {
+          DEFAULT: "hsl(var(--black-ticket))",
+          foreground: "hsl(var(--black-ticket-foreground))",
+        },
+        "double-move": {
+          DEFAULT: "hsl(var(--double-move))",
+          foreground: "hsl(var(--double-move-foreground))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
