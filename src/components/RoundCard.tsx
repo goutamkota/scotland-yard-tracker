@@ -12,15 +12,14 @@ interface RoundCardProps {
 
 function TransportBadge({ transport }: { transport: TransportMode | null | undefined }) {
   if (!transport) return null;
-  const classMap: Record<TransportMode, string> = {
+  const classMap: Record<string, string> = {
     taxi: "transport-taxi",
     bus: "transport-bus",
     underground: "transport-underground",
     black: "transport-black",
-    double: "transport-double",
   };
   return (
-    <span className={`inline-block text-[9px] px-1 py-0 rounded ${classMap[transport]} leading-tight`}>
+    <span className={`inline-block text-[9px] px-1 py-0 rounded ${classMap[transport] || "bg-muted"} leading-tight`}>
       {getTransportEmoji(transport)}
     </span>
   );
@@ -62,8 +61,25 @@ export function RoundCard({ round, playerNames, isCurrent, isMrxVisible, onToggl
             const entry = round.entries[name];
             const loc = entry?.location;
             const isMrX = name === "mrx";
+
+            // ─── VISIBILITY RULES ───
+            // Detectives: always fully visible
+            // Mr. X on reveal rounds / manual reveal / game over: show everything
+            // Mr. X on non-reveal rounds:
+            //   - If transport is "black": hide BOTH transport and location (show "🎩" and "??")
+            //   - Otherwise: SHOW transport type, hide location number only
             const showLocation = !isMrX || isMrxVisible || gameOver;
-            const showTransport = !isMrX || isMrxVisible || gameOver;
+            let showTransport = true;
+            let showBlackHidden = false;
+
+            if (isMrX && !isMrxVisible && !gameOver) {
+              if (entry?.transport === "black") {
+                showTransport = false;
+                showBlackHidden = true;
+              }
+              // For non-black transport on hidden rounds: showTransport remains true
+              // This matches official rules: the travel log always shows ticket type
+            }
 
             return (
               <div key={name} className="flex items-center justify-between text-[10px] sm:text-xs gap-0.5">
@@ -71,13 +87,39 @@ export function RoundCard({ round, playerNames, isCurrent, isMrxVisible, onToggl
                   {isMrX ? "X" : name.toUpperCase()}
                 </span>
                 <span className="font-mono text-foreground flex items-center gap-0.5">
+                  {/* Transport badge */}
                   {showTransport && entry?.transport && <TransportBadge transport={entry.transport} />}
-                  {!showTransport && entry?.transport && (
+                  {showBlackHidden && (
+                    <span className="inline-block text-[9px] px-1 py-0 rounded transport-black leading-tight">🎩</span>
+                  )}
+                  {!showTransport && !showBlackHidden && entry?.transport && (
                     <span className="text-[8px] px-1 rounded bg-muted text-muted-foreground">?</span>
                   )}
+
+                  {/* Location number */}
                   {loc === null ? "—" : showLocation ? loc : "??"}
-                  {/* Show double move second leg */}
-                  {isMrX && entry?.secondLocation && showLocation && (
+
+                  {/* Double move second leg */}
+                  {entry?.isDoubleMove && entry?.secondTransport && (
+                    <span className="text-double-move ml-0.5 flex items-center gap-0.5">
+                      →
+                      {/* Second leg transport badge logic (mirrors first leg) */}
+                      {(() => {
+                        const showSecondTransport = !isMrX || showLocation || entry.secondTransport !== "black";
+                        const showSecondBlackHidden = isMrX && !showLocation && entry.secondTransport === "black";
+                        if (showSecondBlackHidden) {
+                          return <span className="inline-block text-[9px] px-1 py-0 rounded transport-black leading-tight">🎩</span>;
+                        }
+                        if (showSecondTransport) {
+                          return <TransportBadge transport={entry.secondTransport} />;
+                        }
+                        return null;
+                      })()}
+                      {showLocation ? entry.secondLocation : "??"}
+                    </span>
+                  )}
+                  {/* Legacy double move without isDoubleMove flag */}
+                  {!entry?.isDoubleMove && isMrX && entry?.secondLocation && showLocation && (
                     <span className="text-double-move ml-0.5">
                       →{entry.secondLocation}
                     </span>
