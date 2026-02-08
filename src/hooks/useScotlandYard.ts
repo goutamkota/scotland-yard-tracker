@@ -1,10 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { saveSession, loadSession, SessionMeta } from "@/lib/db";
 
+// ──────────────────── Constants ────────────────────
 export const TOTAL_ROUNDS = 24;
 export const REVEAL_ROUNDS = [3, 8, 13, 18, 24];
 
+// ──────────────────── Types ────────────────────
 export type GameStatus = "setup" | "playing" | "detectives_win" | "mrx_wins";
-export type TransportMode = "taxi" | "bus" | "underground" | "black" | "double";
+export type TransportMode = "taxi" | "bus" | "underground" | "black";
 
 export interface PlayerTickets {
   taxi: number;
@@ -17,9 +20,9 @@ export interface PlayerTickets {
 export interface PlayerEntry {
   location: number | null;
   transport: TransportMode | null;
-  // For double move: Mr. X's second move
   secondLocation?: number | null;
   secondTransport?: TransportMode | null;
+  isDoubleMove?: boolean;
 }
 
 export interface RoundData {
@@ -30,6 +33,8 @@ export interface RoundData {
 }
 
 export interface GameState {
+  sessionId: string;
+  sessionCode: string;
   status: GameStatus;
   detectiveCount: number;
   playerNames: string[];
@@ -39,14 +44,15 @@ export interface GameState {
   caughtByDetective: string | null;
   caughtInRound: number | null;
   tickets: Record<string, PlayerTickets>;
+  bank: PlayerTickets;
   mrxPassword: string;
-  // Pending location before transport is selected
   pendingLocation: number | null;
-  // Double move state
   isDoubleMoveActive: boolean;
   doubleMovePhase: "first_location" | "first_transport" | "second_location" | "second_transport" | null;
+  createdAt: number;
 }
 
+// ──────────────────── Initial Tickets ────────────────────
 export const MRX_INITIAL_TICKETS: PlayerTickets = {
   taxi: 4,
   bus: 3,
@@ -62,6 +68,8 @@ export const DETECTIVE_INITIAL_TICKETS: PlayerTickets = {
   black: 0,
   double: 0,
 };
+
+// ──────────────────── Helpers ────────────────────
 
 function createInitialRounds(playerNames: string[]): RoundData[] {
   return Array.from({ length: TOTAL_ROUNDS }, (_, i) => ({
@@ -92,7 +100,7 @@ export function getAvailableTransports(tickets: PlayerTickets, isMrX: boolean): 
   return modes;
 }
 
-export function getTransportLabel(mode: TransportMode): string {
+export function getTransportLabel(mode: TransportMode | "double"): string {
   switch (mode) {
     case "taxi": return "Taxi";
     case "bus": return "Bus";
@@ -102,7 +110,7 @@ export function getTransportLabel(mode: TransportMode): string {
   }
 }
 
-export function getTransportEmoji(mode: TransportMode): string {
+export function getTransportEmoji(mode: TransportMode | "double"): string {
   switch (mode) {
     case "taxi": return "🚕";
     case "bus": return "🚌";
@@ -112,8 +120,21 @@ export function getTransportEmoji(mode: TransportMode): string {
   }
 }
 
-export function useScotlandYard() {
-  const [game, setGame] = useState<GameState>({
+export function getPlayerDisplayName(id: string): string {
+  if (id === "mrx") return "Mr. X";
+  const num = id.replace("d", "");
+  return `Detective ${num}`;
+}
+
+function totalTicketsFor(tickets: PlayerTickets): number {
+  return tickets.taxi + tickets.bus + tickets.underground;
+}
+
+// ──────────────────── Default state ────────────────────
+function defaultGameState(): GameState {
+  return {
+    sessionId: "",
+    sessionCode: "",
     status: "setup",
     detectiveCount: 3,
     playerNames: [],
@@ -123,15 +144,72 @@ export function useScotlandYard() {
     caughtByDetective: null,
     caughtInRound: null,
     tickets: {},
+    bank: { taxi: 0, bus: 0, underground: 0, black: 0, double: 0 },
     mrxPassword: "",
     pendingLocation: null,
     isDoubleMoveActive: false,
     doubleMovePhase: null,
-  });
+    createdAt: Date.now(),
+  };
+}
 
-  const startGame = useCallback((detectiveCount: number, mrxPassword: string) => {
+// ──────────────────── Hook ────────────────────
+export function useScotlandYard(sessionId?: string) {
+  const [game, setGame] = useState<GameState>(defaultGameState);
+  const [loaded, setLoaded] = useState(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Persist to IndexedDB (debounced) ──
+  const persistState = useCallback((state: GameState) => {
+    if (!state.sessionId) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      const meta: SessionMeta = {
+        id: state.sessionId,
+        code: state.sessionCode,
+        createdAt: state.createdAt,
+        updatedAt: Date.now(),
+        round: state.currentRound,
+        status: state.status,
+        detectiveCount: state.detectiveCount,
+        hostName: "Host",
+      };
+      saveSession(state.sessionId, meta, state).catch(console.error);
+    }, 100);
+  }, []);
+
+  // ── Load from IndexedDB on mount ──
+  useEffect(() => {
+    if (sessionId) {
+      loadSession(sessionId).then((data) => {
+        if (data?.state) {
+          setGame(data.state as GameState);
+        }
+        setLoaded(true);
+      }).catch(() => setLoaded(true));
+    } else {
+      setLoaded(true);
+    }
+  }, [sessionId]);
+
+  // ── Auto-persist on every state change ──
+  useEffect(() => {
+    if (loaded && game.sessionId) {
+      persistState(game);
+    }
+  }, [game, loaded, persistState]);
+
+  // ──── State updater ────
+  const updateGame = useCallback((updater: (prev: GameState) => GameState) => {
+    setGame((prev) => updater(prev));
+  }, []);
+
+  // ──── Start Game ────
+  const startGame = useCallback((detectiveCount: number, mrxPassword: string, sId: string, sCode: string) => {
     const playerNames = ["mrx", ...Array.from({ length: detectiveCount }, (_, i) => `d${i + 1}`)];
-    setGame({
+    const newState: GameState = {
+      sessionId: sId,
+      sessionCode: sCode,
       status: "playing",
       detectiveCount,
       playerNames,
@@ -141,14 +219,22 @@ export function useScotlandYard() {
       caughtByDetective: null,
       caughtInRound: null,
       tickets: createInitialTickets(playerNames),
+      bank: { taxi: 0, bus: 0, underground: 0, black: 0, double: 0 },
       mrxPassword,
       pendingLocation: null,
       isDoubleMoveActive: false,
       doubleMovePhase: null,
-    });
+      createdAt: Date.now(),
+    };
+    setGame(newState);
   }, []);
 
-  // Check if a detective location overlaps with another detective
+  // ──── Load an existing game state ────
+  const loadGameState = useCallback((state: GameState) => {
+    setGame(state);
+  }, []);
+
+  // ──── Detective location overlap check (strengthened) ────
   const isLocationTakenByDetective = useCallback(
     (location: number, excludePlayer: string): boolean => {
       if (game.status !== "playing") return false;
@@ -156,49 +242,74 @@ export function useScotlandYard() {
       for (const name of game.playerNames) {
         if (name === "mrx" || name === excludePlayer) continue;
         if (round.entries[name]?.location === location) return true;
+        if (round.entries[name]?.secondLocation === location) return true;
+      }
+      // Also check previous round positions for detectives who haven't moved yet
+      if (game.currentRound > 1) {
+        const prevRound = game.rounds[game.currentRound - 2];
+        if (prevRound.locked) {
+          for (const name of game.playerNames) {
+            if (name === "mrx" || name === excludePlayer) continue;
+            if (round.entries[name]?.location === null) {
+              const prevLoc = prevRound.entries[name]?.secondLocation ?? prevRound.entries[name]?.location;
+              if (prevLoc === location) return true;
+            }
+          }
+        }
       }
       return false;
     },
     [game]
   );
 
-  // Step 1: Submit location (sets pending, waits for transport)
+  // ──── Submit Location ────
   const submitLocation = useCallback((location: number) => {
-    setGame((prev) => {
+    updateGame((prev) => {
       if (prev.status !== "playing") return prev;
 
-      // If in double move second phase, store as pending for second transport
       if (prev.isDoubleMoveActive && prev.doubleMovePhase === "second_location") {
         return {
           ...prev,
           pendingLocation: location,
-          doubleMovePhase: "second_transport",
+          doubleMovePhase: "second_transport" as const,
         };
       }
 
       return {
         ...prev,
         pendingLocation: location,
-        doubleMovePhase: prev.playerNames[prev.currentPlayerIndex] === "mrx" ? "first_transport" : null,
+        doubleMovePhase: null,
       };
     });
-  }, []);
+  }, [updateGame]);
 
-  // Step 2: Select transport (completes the entry)
+  // ──── Select Transport (with detective ticket transfer to Mr. X) ────
   const selectTransport = useCallback((transport: TransportMode, useDoubleMove: boolean = false) => {
-    setGame((prev) => {
+    updateGame((prev) => {
       if (prev.status !== "playing" || prev.pendingLocation === null) return prev;
 
       const roundIdx = prev.currentRound - 1;
       const currentPlayer = prev.playerNames[prev.currentPlayerIndex];
+      const isMrX = currentPlayer === "mrx";
       const newRounds = [...prev.rounds];
-      const newTickets = { ...prev.tickets };
-      newTickets[currentPlayer] = { ...newTickets[currentPlayer] };
+      const newTickets: Record<string, PlayerTickets> = {};
+      for (const k of Object.keys(prev.tickets)) {
+        newTickets[k] = { ...prev.tickets[k] };
+      }
 
       // Decrement ticket
       newTickets[currentPlayer][transport]--;
 
-      // Handle double move second transport
+      // TICKET TRANSFER: detective's used ticket goes to Mr. X
+      // Mr. X's used ticket goes to the Bank
+      const newBank = { ...prev.bank };
+      if (isMrX) {
+        newBank[transport]++;
+      } else if (transport !== "black") {
+        newTickets["mrx"][transport]++;
+      }
+
+      // ── Double move SECOND transport ──
       if (prev.isDoubleMoveActive && prev.doubleMovePhase === "second_transport") {
         const existingEntry = newRounds[roundIdx].entries[currentPlayer];
         newRounds[roundIdx] = {
@@ -209,6 +320,7 @@ export function useScotlandYard() {
               ...existingEntry,
               secondLocation: prev.pendingLocation,
               secondTransport: transport,
+              isDoubleMove: true,
             },
           },
         };
@@ -218,6 +330,7 @@ export function useScotlandYard() {
           ...prev,
           rounds: newRounds,
           tickets: newTickets,
+          bank: newBank,
           pendingLocation: null,
           isDoubleMoveActive: false,
           doubleMovePhase: null,
@@ -225,7 +338,7 @@ export function useScotlandYard() {
         };
       }
 
-      // Normal entry
+      // ── Normal entry ──
       newRounds[roundIdx] = {
         ...newRounds[roundIdx],
         entries: {
@@ -238,54 +351,122 @@ export function useScotlandYard() {
         },
       };
 
-      // If Mr. X and wants to use double move
-      if (currentPlayer === "mrx" && useDoubleMove && newTickets[currentPlayer].double > 0) {
+      // ── Mr. X double move activation ──
+      if (isMrX && useDoubleMove && newTickets[currentPlayer].double > 0) {
         newTickets[currentPlayer].double--;
+        newBank.double++;
         return {
           ...prev,
           rounds: newRounds,
           tickets: newTickets,
+          bank: newBank,
           pendingLocation: null,
           isDoubleMoveActive: true,
-          doubleMovePhase: "second_location",
+          doubleMovePhase: "second_location" as const,
         };
       }
 
-      // Advance to next player
+      // ── Advance to next player ──
       const nextPlayerIndex = prev.currentPlayerIndex + 1;
       return {
         ...prev,
         rounds: newRounds,
         tickets: newTickets,
+        bank: newBank,
         pendingLocation: null,
         isDoubleMoveActive: false,
         doubleMovePhase: null,
         currentPlayerIndex: nextPlayerIndex < prev.playerNames.length ? nextPlayerIndex : prev.currentPlayerIndex,
       };
     });
-  }, []);
+  }, [updateGame]);
 
+  // ──── Cancel pending location ────
   const cancelPendingLocation = useCallback(() => {
-    setGame((prev) => ({
+    updateGame((prev) => ({
       ...prev,
       pendingLocation: null,
-      doubleMovePhase: prev.isDoubleMoveActive ? "second_location" : null,
+      doubleMovePhase: prev.isDoubleMoveActive ? "second_location" as const : null,
     }));
-  }, []);
+  }, [updateGame]);
 
+  // ──── Undo Move (before round lock) ────
+  const undoMove = useCallback((playerName: string) => {
+    updateGame((prev) => {
+      if (prev.status !== "playing") return prev;
+      const roundIdx = prev.currentRound - 1;
+      const round = prev.rounds[roundIdx];
+      if (round.locked) return prev;
+
+      const entry = round.entries[playerName];
+      if (!entry || entry.location === null) return prev;
+
+      const newRounds = [...prev.rounds];
+      const newTickets: Record<string, PlayerTickets> = {};
+      for (const k of Object.keys(prev.tickets)) {
+        newTickets[k] = { ...prev.tickets[k] };
+      }
+
+      // Restore tickets
+      const newBank = { ...prev.bank };
+      if (entry.transport) {
+        newTickets[playerName][entry.transport]++;
+        if (playerName === "mrx") {
+          newBank[entry.transport]--;
+        } else if (entry.transport !== "black") {
+          newTickets["mrx"][entry.transport]--;
+        }
+      }
+      if (entry.secondTransport) {
+        newTickets[playerName][entry.secondTransport]++;
+        if (playerName === "mrx") {
+          newBank[entry.secondTransport]--;
+        }
+      }
+      if (entry.isDoubleMove) {
+        newTickets[playerName].double++;
+        newBank.double--;
+      }
+
+      // Clear entry
+      newRounds[roundIdx] = {
+        ...round,
+        entries: {
+          ...round.entries,
+          [playerName]: { location: null, transport: null },
+        },
+      };
+
+      const playerIdx = prev.playerNames.indexOf(playerName);
+      const newCurrentIdx = Math.min(playerIdx, prev.currentPlayerIndex);
+
+      return {
+        ...prev,
+        rounds: newRounds,
+        tickets: newTickets,
+        bank: newBank,
+        currentPlayerIndex: newCurrentIdx,
+        isDoubleMoveActive: false,
+        doubleMovePhase: null,
+        pendingLocation: null,
+      };
+    });
+  }, [updateGame]);
+
+  // ──── All Players Entered ────
   const allPlayersEntered =
     game.status === "playing" &&
     game.playerNames.every(
       (name) => game.rounds[game.currentRound - 1]?.entries[name]?.location !== null
     );
 
+  // ──── Lock Round ────
   const lockRound = useCallback(() => {
-    setGame((prev) => {
+    updateGame((prev) => {
       if (prev.status !== "playing") return prev;
       const roundIdx = prev.currentRound - 1;
       const round = prev.rounds[roundIdx];
 
-      // Mr. X's effective location (second location if double move used)
       const mrxEntry = round.entries["mrx"];
       const mrxLocation = mrxEntry?.secondLocation ?? mrxEntry?.location;
 
@@ -305,9 +486,22 @@ export function useScotlandYard() {
         return {
           ...prev,
           rounds: newRounds,
-          status: "detectives_win",
+          status: "detectives_win" as GameStatus,
           caughtByDetective: caughtBy,
           caughtInRound: prev.currentRound,
+        };
+      }
+
+      // Check if ALL detectives are out of tickets → Mr. X wins
+      const allDetectivesOut = prev.playerNames
+        .filter((n) => n !== "mrx")
+        .every((n) => totalTicketsFor(prev.tickets[n]) === 0);
+
+      if (allDetectivesOut) {
+        return {
+          ...prev,
+          rounds: newRounds,
+          status: "mrx_wins" as GameStatus,
         };
       }
 
@@ -315,7 +509,7 @@ export function useScotlandYard() {
         return {
           ...prev,
           rounds: newRounds,
-          status: "mrx_wins",
+          status: "mrx_wins" as GameStatus,
         };
       }
 
@@ -326,10 +520,11 @@ export function useScotlandYard() {
         currentPlayerIndex: 0,
       };
     });
-  }, []);
+  }, [updateGame]);
 
+  // ──── Toggle Mr. X Manual Reveal ────
   const toggleMrxReveal = useCallback((roundNumber: number) => {
-    setGame((prev) => {
+    updateGame((prev) => {
       const roundIdx = roundNumber - 1;
       if (!prev.rounds[roundIdx]?.locked) return prev;
       const newRounds = [...prev.rounds];
@@ -339,30 +534,19 @@ export function useScotlandYard() {
       };
       return { ...prev, rounds: newRounds };
     });
-  }, []);
+  }, [updateGame]);
 
+  // ──── Is Mr. X Visible ────
   const isMrxVisible = useCallback((roundNumber: number, round: RoundData) => {
     return REVEAL_ROUNDS.includes(roundNumber) || round.mrxManualReveal;
   }, []);
 
+  // ──── Reset Game ────
   const resetGame = useCallback(() => {
-    setGame({
-      status: "setup",
-      detectiveCount: 3,
-      playerNames: [],
-      rounds: [],
-      currentRound: 1,
-      currentPlayerIndex: 0,
-      caughtByDetective: null,
-      caughtInRound: null,
-      tickets: {},
-      mrxPassword: "",
-      pendingLocation: null,
-      isDoubleMoveActive: false,
-      doubleMovePhase: null,
-    });
+    setGame(defaultGameState());
   }, []);
 
+  // ──── Derived values ────
   const currentPlayerName =
     game.status === "playing" ? game.playerNames[game.currentPlayerIndex] : null;
 
@@ -377,10 +561,13 @@ export function useScotlandYard() {
 
   return {
     game,
+    loaded,
     startGame,
+    loadGameState,
     submitLocation,
     selectTransport,
     cancelPendingLocation,
+    undoMove,
     lockRound,
     toggleMrxReveal,
     isMrxVisible,
@@ -391,10 +578,4 @@ export function useScotlandYard() {
     isLocationTakenByDetective,
     verifyMrxPassword,
   };
-}
-
-export function getPlayerDisplayName(id: string): string {
-  if (id === "mrx") return "Mr. X";
-  const num = id.replace("d", "");
-  return `Detective ${num}`;
 }

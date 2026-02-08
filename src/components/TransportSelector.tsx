@@ -6,6 +6,8 @@ import {
   getTransportEmoji,
   getPlayerDisplayName,
 } from "@/hooks/useScotlandYard";
+import { sounds } from "@/lib/audio";
+import { haptics } from "@/lib/haptics";
 
 interface TransportSelectorProps {
   playerName: string;
@@ -28,6 +30,12 @@ export function TransportSelector({
 }: TransportSelectorProps) {
   const isMrX = playerName === "mrx";
   const available = getAvailableTransports(tickets, isMrX);
+
+  const handleSelect = (mode: TransportMode, useDouble: boolean) => {
+    sounds.confirm();
+    haptics.select();
+    onSelect(mode, useDouble);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm fade-in p-4">
@@ -55,10 +63,11 @@ export function TransportSelector({
         </p>
 
         <div className="grid grid-cols-1 gap-2">
+          {/* Regular transport options */}
           {available.map((mode) => (
             <button
               key={mode}
-              onClick={() => onSelect(mode, false)}
+              onClick={() => handleSelect(mode, false)}
               className={`flex items-center justify-between px-4 py-3 rounded-lg border border-border transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${getTransportButtonClass(mode)}`}
             >
               <span className="flex items-center gap-2 font-mono text-sm font-semibold">
@@ -71,31 +80,46 @@ export function TransportSelector({
             </button>
           ))}
 
-          {/* Double Move option for Mr. X */}
+          {/* 
+            Double Move option for Mr. X:
+            This just activates the double move. The user picks a REGULAR transport
+            for the first leg here. Then after entering the second location, 
+            they pick a potentially DIFFERENT transport for the second leg.
+            This allows all combos: Taxi→Bus, Underground→Black, etc.
+          */}
           {isMrX && canDoubleMove && !isDoubleMoving && tickets.double > 0 && (
             <>
               <div className="border-t border-border my-1" />
+              <p className="text-xs text-muted-foreground font-mono text-center">
+                ⚡ Use Double Move (×{tickets.double}) — pick first leg transport:
+              </p>
               {available.map((mode) => (
                 <button
                   key={`double-${mode}`}
-                  onClick={() => onSelect(mode, true)}
+                  onClick={() => handleSelect(mode, true)}
                   className={`flex items-center justify-between px-4 py-3 rounded-lg border-2 border-double-move/40 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${getTransportButtonClass(mode)} relative`}
                 >
                   <span className="flex items-center gap-2 font-mono text-sm font-semibold">
                     <span className="text-lg">⚡{getTransportEmoji(mode)}</span>
-                    2X + {getTransportLabel(mode)}
+                    2X: {getTransportLabel(mode)}
                   </span>
                   <span className="font-mono text-xs opacity-70">
-                    2X:×{tickets.double} {mode}:×{tickets[mode]}
+                    2X:×{tickets.double} · {getTransportLabel(mode)}:×{tickets[mode]}
                   </span>
                 </button>
               ))}
+              <p className="text-[10px] text-muted-foreground font-mono text-center opacity-60">
+                After entering 2nd location, you'll pick a different transport for the 2nd leg
+              </p>
             </>
           )}
         </div>
 
         <button
-          onClick={onCancel}
+          onClick={() => {
+            sounds.tap();
+            onCancel();
+          }}
           className="w-full mt-3 py-2 rounded-lg bg-secondary text-muted-foreground font-mono text-xs hover:text-foreground transition-colors"
         >
           Cancel
@@ -115,7 +139,5 @@ function getTransportButtonClass(mode: TransportMode): string {
       return "bg-underground/10 hover:bg-underground/20 text-foreground";
     case "black":
       return "bg-black-ticket/20 hover:bg-black-ticket/30 text-foreground";
-    case "double":
-      return "bg-double-move/10 hover:bg-double-move/20 text-foreground";
   }
 }

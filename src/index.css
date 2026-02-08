@@ -6,6 +6,70 @@
 
 @layer base {
   :root {
+    --background: 210 20% 96%;
+    --foreground: 225 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 225 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 30% 12%;
+
+    --primary: 200 70% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 15% 90%;
+    --secondary-foreground: 225 30% 12%;
+
+    --muted: 210 15% 92%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 0 70% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 15% 85%;
+    --input: 210 15% 88%;
+    --ring: 200 70% 45%;
+
+    --radius: 0.5rem;
+
+    --mr-x: 0 70% 50%;
+    --mr-x-foreground: 0 0% 100%;
+    --detective: 210 60% 50%;
+    --detective-foreground: 0 0% 100%;
+    --reveal: 200 70% 45%;
+    --locked: 210 15% 92%;
+    --current-round: 200 70% 45%;
+
+    --taxi: 45 90% 50%;
+    --taxi-foreground: 45 100% 10%;
+    --bus: 145 60% 38%;
+    --bus-foreground: 0 0% 100%;
+    --underground: 340 70% 48%;
+    --underground-foreground: 0 0% 100%;
+    --black-ticket: 0 0% 20%;
+    --black-ticket-foreground: 0 0% 85%;
+    --double-move: 270 60% 50%;
+    --double-move-foreground: 0 0% 100%;
+
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-body: 'Inter', sans-serif;
+
+    --sidebar-background: 210 15% 94%;
+    --sidebar-foreground: 225 30% 12%;
+    --sidebar-primary: 200 70% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 90%;
+    --sidebar-accent-foreground: 225 30% 12%;
+    --sidebar-border: 210 15% 85%;
+    --sidebar-ring: 200 70% 45%;
+  }
+
+  .dark {
     --background: 225 30% 6%;
     --foreground: 210 20% 88%;
 
@@ -34,8 +98,6 @@
     --input: 225 20% 20%;
     --ring: 200 70% 50%;
 
-    --radius: 0.5rem;
-
     --mr-x: 0 70% 50%;
     --mr-x-foreground: 0 0% 100%;
     --detective: 210 60% 55%;
@@ -54,10 +116,6 @@
     --black-ticket-foreground: 0 0% 80%;
     --double-move: 270 60% 55%;
     --double-move-foreground: 0 0% 100%;
-
-    --font-display: 'Space Grotesk', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
-    --font-body: 'Inter', sans-serif;
 
     --sidebar-background: 225 25% 8%;
     --sidebar-foreground: 210 20% 88%;

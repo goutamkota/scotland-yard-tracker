@@ -1,11 +1,21 @@
 import { useState } from "react";
-import { Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff, Users, Wifi } from "lucide-react";
+import type { ConnectedPlayer } from "@/lib/multiplayer";
+import { getPlayerDisplayName } from "@/hooks/useScotlandYard";
 
 interface GameSetupModalProps {
   onStart: (detectiveCount: number, mrxPassword: string) => void;
+  sessionCode?: string;
+  isMultiplayer?: boolean;
+  connectedPlayers?: ConnectedPlayer[];
 }
 
-export function GameSetupModal({ onStart }: GameSetupModalProps) {
+export function GameSetupModal({
+  onStart,
+  sessionCode,
+  isMultiplayer = false,
+  connectedPlayers = [],
+}: GameSetupModalProps) {
   const [count, setCount] = useState(3);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -26,6 +36,36 @@ export function GameSetupModal({ onStart }: GameSetupModalProps) {
         <p className="text-muted-foreground text-center mb-6 text-xs sm:text-sm font-mono">
           Track the chase across London
         </p>
+
+        {/* Session code display for multiplayer */}
+        {isMultiplayer && sessionCode && (
+          <div className="mb-6 p-4 rounded-lg border border-border bg-secondary/50 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Wifi className="w-4 h-4 text-primary" />
+              <span className="text-xs font-mono text-muted-foreground">Session Code</span>
+            </div>
+            <p className="font-mono text-2xl font-bold text-primary tracking-widest">{sessionCode}</p>
+            <p className="text-[10px] font-mono text-muted-foreground mt-1">
+              Share this code with other players to join
+            </p>
+
+            {connectedPlayers.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <div className="flex items-center justify-center gap-1.5 mb-2 text-xs font-mono text-muted-foreground">
+                  <Users className="w-3.5 h-3.5" />
+                  {connectedPlayers.length} player{connectedPlayers.length > 1 ? "s" : ""} connected
+                </div>
+                <div className="flex flex-wrap gap-1 justify-center">
+                  {connectedPlayers.map((p) => (
+                    <span key={p.peerId} className="text-[10px] font-mono px-2 py-0.5 rounded bg-muted text-foreground">
+                      {p.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mb-6">
           <label className="block text-sm text-muted-foreground mb-3 font-mono">
@@ -64,6 +104,7 @@ export function GameSetupModal({ onStart }: GameSetupModalProps) {
                 setPassword(e.target.value);
                 if (error) setError("");
               }}
+              onKeyDown={(e) => e.key === "Enter" && handleStart()}
               placeholder="Set a password for Mr. X"
               className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground font-mono text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-ring"
             />
