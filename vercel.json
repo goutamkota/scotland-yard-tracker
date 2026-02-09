@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "env": {
+    "NPM_RC_CONTENT": "@lovable-tagger:registry=https://registry.npmjs.org/"
+  }
+}
